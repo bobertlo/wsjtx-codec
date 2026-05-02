@@ -47,16 +47,29 @@ def qt_string(s: str | None) -> bytes:
 # read_u8
 # ---------------------------------------------------------------------------
 
-U8_CASES = [
-    {"input": bytes([0x00]), "expected": 0},
-    {"input": bytes([0x80]), "expected": 128},
-    {"input": bytes([0xFF]), "expected": 255},
+U8_READER_CASES = [
+    {"input": bytes([0x00]), "expected": 0, "remaining": 0},
+    {"input": bytes([0x80]), "expected": 128, "remaining": 0},
+    {"input": bytes([0xFF]), "expected": 255, "remaining": 0},
+    {"input": bytes([0x00, 0xFF]), "expected": 0, "remaining": 1},
 ]
 
 
-@pytest.mark.parametrize("case", U8_CASES)
+def u8_reader_adapter(r):
+    return r.read_u8()
+
+
+def _run_reader_test_case(case, adapter):
+    r = reader(case["input"])
+    out = adapter(r)
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
+
+
+@pytest.mark.parametrize("case", U8_READER_CASES)
 def test_read_u8(case):
-    assert reader(case["input"]).read_u8() == case["expected"]
+    _run_reader_test_case(case, u8_reader_adapter)
 
 
 def test_read_u8_truncated():
@@ -69,15 +82,20 @@ def test_read_u8_truncated():
 # ---------------------------------------------------------------------------
 
 BOOL_CASES = [
-    {"input": bytes([0x00]), "expected": False},
-    {"input": bytes([0x01]), "expected": True},
-    {"input": bytes([0xFF]), "expected": True},  # any non-zero → True
+    {"input": bytes([0x00]), "expected": False, "remaining": 0},
+    {"input": bytes([0x01]), "expected": True, "remaining": 0},
+    {"input": bytes([0xFF]), "expected": True, "remaining": 0},
+    {"input": bytes([0x00, 0x01]), "expected": False, "remaining": 1},
 ]
 
 
 @pytest.mark.parametrize("case", BOOL_CASES)
 def test_read_bool(case):
-    assert reader(case["input"]).read_bool() == case["expected"]
+    r = reader(case["input"])
+    out = r.read_bool()
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
 
 
 def test_read_bool_truncated():
@@ -90,18 +108,27 @@ def test_read_bool_truncated():
 # ---------------------------------------------------------------------------
 
 U32_CASES = [
-    {"input": u32(0), "expected": 0},
+    {"input": u32(0), "expected": 0, "remaining": 0},
     {"input": u32(1), "expected": 1},
     {"input": u32(0xADBCCD), "expected": 0xADBCCD},
     {"input": u32(29010001), "expected": 29010001},
     {"input": u32(0xFFFFFFFE), "expected": 0xFFFFFFFE},
     {"input": u32(0xFFFFFFFF), "expected": 0xFFFFFFFF},  # raw sentinel value
+    {
+        "input": bytes([0x00, 0x00, 0x03, 0x04, 0x00]),
+        "expected": 0x00000304,
+        "remaining": 1,
+    },
 ]
 
 
 @pytest.mark.parametrize("case", U32_CASES)
 def test_read_u32(case):
-    assert reader(case["input"]).read_u32() == case["expected"]
+    r = reader(case["input"])
+    out = r.read_u32()
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
 
 
 def test_read_u32_truncated():
