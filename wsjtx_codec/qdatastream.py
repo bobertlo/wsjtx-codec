@@ -41,11 +41,6 @@ class QDataStreamReader:
         return struct.unpack_from(">d", self._read(8))[0]
 
     def read_utf8(self) -> str | None:
-        """
-        Qt null QString  → None   (length prefix == 0xFFFFFFFF)
-        Qt empty QString → ""     (length prefix == 0x00000000)
-        Otherwise        → decoded UTF-8 string
-        """
         length = self.read_u32()
         if length == 0xFFFFFFFF:
             return None
