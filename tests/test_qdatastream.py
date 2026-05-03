@@ -43,20 +43,25 @@ def qt_string(s: str | None) -> bytes:
     return struct.pack(">I", len(encoded)) + encoded
 
 
-# ---------------------------------------------------------------------------
-# read_u8
-# ---------------------------------------------------------------------------
+def _run_reader_test_case(case, adapter):
+    r = reader(case["input"])
+    out = adapter(r)
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
 
-U8_CASES = [
-    {"input": bytes([0x00]), "expected": 0},
-    {"input": bytes([0x80]), "expected": 128},
-    {"input": bytes([0xFF]), "expected": 255},
+
+U8_READER_CASES = [
+    {"input": bytes([0x00]), "expected": 0, "remaining": 0},
+    {"input": bytes([0x80]), "expected": 128, "remaining": 0},
+    {"input": bytes([0xFF]), "expected": 255, "remaining": 0},
+    {"input": bytes([0x00, 0xFF]), "expected": 0, "remaining": 1},
 ]
 
 
-@pytest.mark.parametrize("case", U8_CASES)
+@pytest.mark.parametrize("case", U8_READER_CASES)
 def test_read_u8(case):
-    assert reader(case["input"]).read_u8() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_u8())
 
 
 def test_read_u8_truncated():
@@ -64,20 +69,21 @@ def test_read_u8_truncated():
         reader(b"").read_u8()
 
 
-# ---------------------------------------------------------------------------
-# read_bool
-# ---------------------------------------------------------------------------
-
-BOOL_CASES = [
-    {"input": bytes([0x00]), "expected": False},
-    {"input": bytes([0x01]), "expected": True},
-    {"input": bytes([0xFF]), "expected": True},  # any non-zero → True
+BOOL_READER_CASES = [
+    {"input": bytes([0x00]), "expected": False, "remaining": 0},
+    {"input": bytes([0x01]), "expected": True, "remaining": 0},
+    {"input": bytes([0xFF]), "expected": True, "remaining": 0},
+    {"input": bytes([0x00, 0x01]), "expected": False, "remaining": 1},
 ]
 
 
-@pytest.mark.parametrize("case", BOOL_CASES)
+def bool_reader_adapter(r):
+    return r.read_bool()
+
+
+@pytest.mark.parametrize("case", BOOL_READER_CASES)
 def test_read_bool(case):
-    assert reader(case["input"]).read_bool() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_bool())
 
 
 def test_read_bool_truncated():
@@ -85,23 +91,29 @@ def test_read_bool_truncated():
         reader(b"").read_bool()
 
 
-# ---------------------------------------------------------------------------
-# read_u32
-# ---------------------------------------------------------------------------
-
-U32_CASES = [
-    {"input": u32(0), "expected": 0},
+U32_READER_CASES = [
+    {"input": u32(0), "expected": 0, "remaining": 0},
     {"input": u32(1), "expected": 1},
     {"input": u32(0xADBCCD), "expected": 0xADBCCD},
     {"input": u32(29010001), "expected": 29010001},
     {"input": u32(0xFFFFFFFE), "expected": 0xFFFFFFFE},
-    {"input": u32(0xFFFFFFFF), "expected": 0xFFFFFFFF},  # raw sentinel value
+    {"input": u32(0xFFFFFFFF), "expected": 0xFFFFFFFF},
+    {
+        "input": bytes([0xFF, 0xFF, 0xFF, 0xFF, 0x00]),
+        "expected": 0xFFFFFFFF,
+        "remaining": 1,
+    },
+    {
+        "input": bytes([0x00, 0x00, 0x03, 0x04, 0x00]),
+        "expected": 0x00000304,
+        "remaining": 1,
+    },
 ]
 
 
-@pytest.mark.parametrize("case", U32_CASES)
+@pytest.mark.parametrize("case", U32_READER_CASES)
 def test_read_u32(case):
-    assert reader(case["input"]).read_u32() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_u32())
 
 
 def test_read_u32_truncated():
@@ -109,23 +121,20 @@ def test_read_u32_truncated():
         reader(b"\x00\x00").read_u32()  # only 2 bytes, need 4
 
 
-# ---------------------------------------------------------------------------
-# read_i32
-# ---------------------------------------------------------------------------
-
-I32_CASES = [
-    {"input": i32(0), "expected": 0},
+I32_READER_CASES = [
+    {"input": i32(0), "expected": 0, "remaining": 0},
     {"input": i32(1), "expected": 1},
     {"input": i32(-1), "expected": -1},
     {"input": i32(2147483647), "expected": 2147483647},  # INT32_MAX
     {"input": i32(-2147483648), "expected": -2147483648},  # INT32_MIN
     {"input": i32(-15), "expected": -15},  # typical SNR
+    {"input": bytes([0x00, 0x00, 0x00, 0x00, 0x01]), "expected": 0, "remaining": 1},
 ]
 
 
-@pytest.mark.parametrize("case", I32_CASES)
+@pytest.mark.parametrize("case", I32_READER_CASES)
 def test_read_i32(case):
-    assert reader(case["input"]).read_i32() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_i32())
 
 
 def test_read_i32_truncated():
@@ -133,23 +142,24 @@ def test_read_i32_truncated():
         reader(b"\x00").read_i32()
 
 
-# ---------------------------------------------------------------------------
-# read_i64
-# ---------------------------------------------------------------------------
-
-I64_CASES = [
-    {"input": i64(0), "expected": 0},
+I64_READER_CASES = [
+    {"input": i64(0), "expected": 0, "remaining": 0},
     {"input": i64(1), "expected": 1},
     {"input": i64(-1), "expected": -1},
     {"input": i64(9223372036854775807), "expected": 9223372036854775807},  # INT64_MAX
     {"input": i64(-9223372036854775808), "expected": -9223372036854775808},  # INT64_MIN
     {"input": i64(1_700_000_000_000), "expected": 1_700_000_000_000},  # ms timestamp
+    {
+        "input": i64(1_700_000_000_000) + bytes([0x00]),
+        "expected": 1_700_000_000_000,
+        "remaining": 1,
+    },
 ]
 
 
-@pytest.mark.parametrize("case", I64_CASES)
+@pytest.mark.parametrize("case", I64_READER_CASES)
 def test_read_i64(case):
-    assert reader(case["input"]).read_i64() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_i64())
 
 
 def test_read_i64_truncated():
@@ -157,29 +167,20 @@ def test_read_i64_truncated():
         reader(b"\x00\x00\x00\x00").read_i64()  # 4 bytes, need 8
 
 
-# ---------------------------------------------------------------------------
-# read_utf8
-# ---------------------------------------------------------------------------
-
-UTF8_CASES = [
-    # Qt null QString sentinel
-    {"input": qt_string(None), "expected": None},
-    # Empty string
-    {"input": qt_string(""), "expected": ""},
-    # Plain ASCII
+UTF8_READER_CASES = [
+    {"input": qt_string(None), "expected": None, "remaining": 0},
+    {"input": qt_string(""), "expected": "", "remaining": 0},
     {"input": qt_string("K0SWE"), "expected": "K0SWE"},
-    # Typical WSJT-X decode line
     {"input": qt_string("CQ DX W1AW FN31"), "expected": "CQ DX W1AW FN31"},
-    # Multi-byte UTF-8 (non-ASCII callsign region)
     {"input": qt_string("de DF0MU/p"), "expected": "de DF0MU/p"},
-    # Unicode snowman — ensures raw byte-length prefix, not char-length
-    {"input": qt_string("☃"), "expected": "☃"},
+    {"input": qt_string("☃"), "expected": "☃", "remaining": 0},
+    {"input": qt_string("☃") + bytes([0x00]), "expected": "☃", "remaining": 1},
 ]
 
 
-@pytest.mark.parametrize("case", UTF8_CASES)
+@pytest.mark.parametrize("case", UTF8_READER_CASES)
 def test_read_utf8(case):
-    assert reader(case["input"]).read_utf8() == case["expected"]
+    _run_reader_test_case(case, lambda r: r.read_utf8())
 
 
 def test_read_utf8_truncated_header():
@@ -195,18 +196,15 @@ def test_read_utf8_truncated_body():
         reader(data).read_utf8()
 
 
-# ---------------------------------------------------------------------------
-# read_f64  (Qt float-as-double quirk)
-# ---------------------------------------------------------------------------
-
 F64_CASES = [
-    {"input": f64(0.0), "expected": 0.0},
+    {"input": f64(0.0), "expected": 0.0, "reimaining": 0},
     {"input": f64(1.0), "expected": 1.0},
     {"input": f64(-1.0), "expected": -1.0},
     {"input": f64(-12.5), "expected": -12.5},  # typical FT8 SNR
     {"input": f64(0.1), "expected": 0.1},
     {"input": f64(math.inf), "expected": math.inf},
-    {"input": f64(-math.inf), "expected": -math.inf},
+    {"input": f64(-math.inf), "expected": -math.inf, "remaining": 0},
+    {"input": f64(-math.inf) + bytes([0x00]), "expected": -math.inf, "remaining": 1},
 ]
 
 
@@ -224,11 +222,6 @@ def test_read_f64_nan():
 def test_read_f64_truncated():
     with pytest.raises(EOFError):
         reader(b"\x00\x00\x00\x00").read_f64()
-
-
-# ---------------------------------------------------------------------------
-# Multi-field sequential reads (integration smoke test)
-# ---------------------------------------------------------------------------
 
 
 def test_sequential_reads_heartbeat():
