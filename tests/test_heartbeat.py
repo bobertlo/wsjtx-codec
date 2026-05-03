@@ -8,14 +8,6 @@ from wsjtx_codec.packet import Heartbeat, decode_heartbeat
 from tests.qdatastream_helpers import reader, u32, qt_string
 
 
-def _run_test_case(case, adapter):
-    r = reader(case["input"])
-    out = adapter(r)
-    assert out == case["expected"]
-    if case.get("remaining") is not None:
-        assert r.remaining() == case["remaining"]
-
-
 def heartbeat_bytes(
     id: str | None, max_schema: int, version: str | None, revision: str | None
 ) -> bytes:
@@ -50,7 +42,11 @@ HEARTBEAT_CASES = [
 
 @pytest.mark.parametrize("case", HEARTBEAT_CASES)
 def test_decode_heartbeat(case):
-    _run_test_case(case, decode_heartbeat)
+    r = reader(case["input"])
+    out = decode_heartbeat(r)
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
 
 
 def test_decode_heartbeat_truncated_id():

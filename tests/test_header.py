@@ -9,14 +9,6 @@ from wsjtx_codec.packet import MAGIC, Header, decode_header
 from tests.qdatastream_helpers import reader, u32
 
 
-def _run_test_case(case, adapter):
-    r = reader(case["input"])
-    out = adapter(r)
-    assert out == case["expected"]
-    if case.get("remaining") is not None:
-        assert r.remaining() == case["remaining"]
-
-
 def header_bytes(schema: int, msg_type: int, *, magic: int = MAGIC) -> bytes:
     return u32(magic) + u32(schema) + u32(msg_type)
 
@@ -35,7 +27,11 @@ HEADER_CASES = [
 
 @pytest.mark.parametrize("case", HEADER_CASES)
 def test_decode_header(case):
-    _run_test_case(case, decode_header)
+    r = reader(case["input"])
+    out = decode_header(r)
+    assert out == case["expected"]
+    if case.get("remaining") is not None:
+        assert r.remaining() == case["remaining"]
 
 
 def test_decode_header_bad_magic():
