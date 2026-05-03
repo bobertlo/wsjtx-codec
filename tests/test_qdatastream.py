@@ -5,6 +5,7 @@ test_qdatastream_reader.py — pytest harness for QDataStreamReader.
 
 import math
 import struct
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -256,3 +257,83 @@ def test_assert_empty_passes():
     r = reader(b"\x2a")
     assert r.read_u8() == 42
     r.assert_empty()  # no exception
+
+
+_J2000 = 2451545  # JDN of 2000-01-01
+_JDN_20201030 = 2459153  # JDN of 2020-10-30
+
+
+def qdatetime(jdn: int, ms: int, timespec: int, offset: int | None = None) -> bytes:
+    b = i64(jdn) + u32(ms) + bytes([timespec])
+    if timespec == 2:
+        b += i32(offset)
+    return b
+
+
+QDATETIME_READER_CASES = [
+    {
+        "input": qdatetime(_J2000, 0, 1),
+        "expected": datetime(2000, 1, 1, tzinfo=timezone.utc),
+        "remaining": 0,
+    },
+    {
+        "input": qdatetime(_J2000, 43200000, 1),
+        "expected": datetime(2000, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        "remaining": 0,
+    },
+    {
+        "input": qdatetime(_JDN_20201030, 41397320, 1),  # sub-second ms truncated
+        "expected": datetime(2020, 10, 30, 11, 29, 57, tzinfo=timezone.utc),
+        "remaining": 0,
+    },
+    {
+        "input": qdatetime(_JDN_20201030, 41337320, 1),
+        "expected": datetime(2020, 10, 30, 11, 28, 57, tzinfo=timezone.utc),
+        "remaining": 0,
+    },
+    {"input": qdatetime(_J2000, 0, 0), "expected": datetime(2000, 1, 1)},
+    {
+        "input": qdatetime(_J2000, 3600000, 2, offset=3600),
+        "expected": datetime(
+            2000, 1, 1, 1, 0, 0, tzinfo=timezone(timedelta(seconds=3600))
+        ),
+        "remaining": 0,
+    },
+    {
+        "input": qdatetime(_J2000, 3600000, 2, offset=-18000),
+        "expected": datetime(
+            2000, 1, 1, 1, 0, 0, tzinfo=timezone(timedelta(seconds=-18000))
+        ),
+        "remaining": 0,
+    },
+    {
+        "input": qdatetime(_J2000, 0, 1) + b"\xff",
+        "expected": datetime(2000, 1, 1, tzinfo=timezone.utc),
+        "remaining": 1,
+    },
+]
+
+
+@pytest.mark.parametrize("case", QDATETIME_READER_CASES)
+def test_read_qdatetime(case):
+    _run_reader_test_case(case, lambda r: r.read_qdatetime())
+
+
+def test_read_qdatetime_truncated_jdn():
+    with pytest.raises(EOFError):
+        reader(b"\x00" * 4).read_qdatetime()
+
+
+def test_read_qdatetime_truncated_ms():
+    with pytest.raises(EOFError):
+        reader(i64(_J2000) + b"\x00\x00").read_qdatetime()
+
+
+def test_read_qdatetime_truncated_timespec():
+    with pytest.raises(EOFError):
+        reader(i64(_J2000) + u32(0)).read_qdatetime()
+
+
+def test_read_qdatetime_unsupported_timespec():
+    with pytest.raises(ValueError, match="timespec"):
+        reader(qdatetime(_J2000, 0, 3)).read_qdatetime()

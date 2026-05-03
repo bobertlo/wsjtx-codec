@@ -3,6 +3,9 @@ QDataStreamReader — minimal Qt QDataStream wire-format reader.
 """
 
 import struct
+from datetime import date, datetime, timedelta, timezone
+
+_JDN_ORDINAL_OFFSET = 1721425  # JDN 1721426 == Python ordinal 1 (0001-01-01)
 
 
 class QDataStreamReader:
@@ -48,6 +51,29 @@ class QDataStreamReader:
             return ""
         raw = bytes(self._read(length))
         return raw.decode("utf-8")
+
+    def read_qdatetime(self) -> datetime:
+        jdn = self.read_i64()
+        ms = self.read_u32()
+        timespec = self.read_u8()
+
+        d = date.fromordinal(jdn - _JDN_ORDINAL_OFFSET)
+        hour = ms // 3600000
+        ms %= 3600000
+        minute = ms // 60000
+        ms %= 60000
+        second = ms // 1000
+
+        if timespec == 0:
+            return datetime(d.year, d.month, d.day, hour, minute, second)
+        if timespec == 1:
+            return datetime(
+                d.year, d.month, d.day, hour, minute, second, tzinfo=timezone.utc
+            )
+        if timespec == 2:
+            tz = timezone(timedelta(seconds=self.read_i32()))
+            return datetime(d.year, d.month, d.day, hour, minute, second, tzinfo=tz)
+        raise ValueError(f"unsupported QDateTime timespec {timespec}")
 
     def remaining(self) -> int:
         return len(self.data) - self.offset
