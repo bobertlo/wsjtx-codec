@@ -20,3 +20,20 @@ def decode_header(r: QDataStreamReader) -> Header:
     if magic != MAGIC:
         raise ValueError(f"bad magic number: {magic:#010x}")
     return Header(schema=r.read_u32(), type=r.read_u32())
+
+
+@dataclass
+class Heartbeat:
+    id: str | None
+    max_schema: int
+    version: str | None
+    revision: str | None
+
+
+def decode_heartbeat(r: QDataStreamReader) -> Heartbeat:
+    return Heartbeat(
+        id=r.read_utf8(),
+        max_schema=r.read_u32(),
+        version=r.read_utf8(),
+        revision=r.read_utf8(),
+    )
