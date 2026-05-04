@@ -8,6 +8,27 @@ from wsjtx_codec.qdatastream import QDataStreamReader
 
 MAGIC = 0xADBCCBDA
 HEARTBEAT_TYPE = 0
+SUPPORTED_SCHEMAS = {2}
+
+
+class WsjtxDecodeError(Exception):
+    """Base for all decode failures."""
+
+
+class UnknownMessageType(WsjtxDecodeError):
+    def __init__(self, message_type: int):
+        self.message_type = message_type
+        super().__init__(f"unknown message type: {message_type}")
+
+
+class MalformedPacket(WsjtxDecodeError):
+    """Buffer is too short, wrong magic, bad UTF-8, etc."""
+
+
+class UnsupportedSchemaVersion(WsjtxDecodeError):
+    def __init__(self, version: int):
+        self.version = version
+        super().__init__(f"unsupported schema version: {version}")
 
 
 @dataclass
@@ -45,7 +66,14 @@ def decode_heartbeat(header: Header, r: QDataStreamReader) -> HeartbeatPacket:
 
 
 def decode_packet(r: QDataStreamReader) -> HeartbeatPacket:
-    header = decode_header(r)
-    if header.type == HEARTBEAT_TYPE:
-        return decode_heartbeat(header, r)
-    raise ValueError(f"unknown packet type: {header.type}")
+    try:
+        header = decode_header(r)
+        if header.schema not in SUPPORTED_SCHEMAS:
+            raise UnsupportedSchemaVersion(header.schema)
+        if header.type == HEARTBEAT_TYPE:
+            return decode_heartbeat(header, r)
+        raise UnknownMessageType(header.type)
+    except WsjtxDecodeError:
+        raise
+    except (EOFError, ValueError) as e:
+        raise MalformedPacket(str(e)) from e
