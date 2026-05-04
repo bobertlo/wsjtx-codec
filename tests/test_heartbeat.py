@@ -23,7 +23,12 @@ HEARTBEAT_CASES = [
         ),
         "header": DUMMY_HEADER,
         "expected": HeartbeatPacket(
-            schema=2, type=0, id="WSJT-X", max_schema=3, version="2.2.2", revision="0d9b96"
+            schema=2,
+            type=0,
+            id="WSJT-X",
+            max_schema=3,
+            version="2.2.2",
+            revision="0d9b96",
         ),
         "remaining": 0,
     },
@@ -31,14 +36,24 @@ HEARTBEAT_CASES = [
         "input": heartbeat_bytes("WSJT-X", 2, "2.1.0", "abc123"),
         "header": DUMMY_HEADER,
         "expected": HeartbeatPacket(
-            schema=2, type=0, id="WSJT-X", max_schema=2, version="2.1.0", revision="abc123"
+            schema=2,
+            type=0,
+            id="WSJT-X",
+            max_schema=2,
+            version="2.1.0",
+            revision="abc123",
         ),
     },
     {
         "input": heartbeat_bytes("my-client", 3, "1.0.0", "rev1") + b"\xff",
         "header": DUMMY_HEADER,
         "expected": HeartbeatPacket(
-            schema=2, type=0, id="my-client", max_schema=3, version="1.0.0", revision="rev1"
+            schema=2,
+            type=0,
+            id="my-client",
+            max_schema=3,
+            version="1.0.0",
+            revision="rev1",
         ),
         "remaining": 1,
     },
