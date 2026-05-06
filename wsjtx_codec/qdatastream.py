@@ -40,6 +40,9 @@ class QDataStreamReader:
     def read_i64(self) -> int:
         return struct.unpack_from(">q", self._read(8))[0]
 
+    def read_u64(self) -> int:
+        return struct.unpack_from(">Q", self._read(8))[0]
+
     def read_f64(self) -> float:
         return struct.unpack_from(">d", self._read(8))[0]
 
