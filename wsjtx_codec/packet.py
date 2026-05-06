@@ -9,6 +9,7 @@ from wsjtx_codec.qdatastream import QDataStreamReader
 MAGIC = 0xADBCCBDA
 HEARTBEAT_TYPE = 0
 STATUS_TYPE = 1
+DECODE_TYPE = 2
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -146,7 +147,42 @@ def decode_status(header: Header, r: QDataStreamReader) -> StatusPacket:
     )
 
 
-def decode_packet(r: QDataStreamReader) -> HeartbeatPacket | StatusPacket:
+@dataclass
+class DecodePacket:
+    schema: int
+    type: int
+    id: str | None
+    new: bool
+    time_ms: int
+    snr: int
+    delta_time_s: float
+    delta_freq_hz: int
+    mode: str | None
+    message: str | None
+    low_confidence: bool
+    off_air: bool
+
+
+def decode_decode(header: Header, r: QDataStreamReader) -> DecodePacket:
+    return DecodePacket(
+        schema=header.schema,
+        type=header.type,
+        id=r.read_utf8(),
+        new=r.read_bool(),
+        time_ms=r.read_u32(),
+        snr=r.read_i32(),
+        delta_time_s=r.read_f64(),
+        delta_freq_hz=r.read_u32(),
+        mode=r.read_utf8(),
+        message=r.read_utf8(),
+        low_confidence=r.read_bool(),
+        off_air=r.read_bool(),
+    )
+
+
+def decode_packet(
+    r: QDataStreamReader,
+) -> HeartbeatPacket | StatusPacket | DecodePacket:
     try:
         header = decode_header(r)
         if header.schema not in SUPPORTED_SCHEMAS:
@@ -155,6 +191,8 @@ def decode_packet(r: QDataStreamReader) -> HeartbeatPacket | StatusPacket:
             return decode_heartbeat(header, r)
         if header.type == STATUS_TYPE:
             return decode_status(header, r)
+        if header.type == DECODE_TYPE:
+            return decode_decode(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise

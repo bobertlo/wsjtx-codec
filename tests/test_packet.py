@@ -7,6 +7,7 @@ import struct
 import pytest
 
 from wsjtx_codec.packet import (
+    DecodePacket,
     HeartbeatPacket,
     MalformedPacket,
     StatusPacket,
@@ -78,6 +79,33 @@ PACKET_CASES = [
             tr_period=None,
             config_name="G90",
             tx_message="CQ KF0UNK EN34                       ",
+        ),
+    },
+    {
+        "input": bytes.fromhex(
+            "adbccbda00000002000000020000000657534a542d58"
+            "01"
+            "010c3fe0"
+            "fffffffc"
+            "bfe0000000000000"
+            "00000744"
+            "000000017e"
+            "000000114b4630554e4b204b4935564843202d3231"
+            "0000"
+        ),
+        "expected": DecodePacket(
+            schema=2,
+            type=2,
+            id="WSJT-X",
+            new=True,
+            time_ms=17580000,
+            snr=-4,
+            delta_time_s=-0.5,
+            delta_freq_hz=1860,
+            mode="~",
+            message="KF0UNK KI5VHC -21",
+            low_confidence=False,
+            off_air=False,
         ),
     },
 ]
