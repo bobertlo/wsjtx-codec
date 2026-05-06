@@ -3,6 +3,7 @@ WSJT-X packet decoding — header parsing and message dispatch.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from wsjtx_codec.qdatastream import QDataStreamReader
 
@@ -11,6 +12,7 @@ HEARTBEAT_TYPE = 0
 STATUS_TYPE = 1
 DECODE_TYPE = 2
 CLEAR_TYPE = 3
+QSO_LOGGED_TYPE = 5
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -192,9 +194,58 @@ def decode_clear(header: Header, r: QDataStreamReader) -> ClearPacket:
     return ClearPacket(schema=header.schema, type=header.type, id=r.read_utf8())
 
 
+@dataclass
+class QsoLoggedPacket:
+    schema: int
+    type: int
+    id: str | None
+    time_off: datetime
+    dx_call: str | None
+    dx_grid: str | None
+    dial_freq_hz: int
+    mode: str | None
+    report_sent: str | None
+    report_rcvd: str | None
+    tx_power: str | None
+    comments: str | None
+    name: str | None
+    time_on: datetime
+    operator_call: str | None
+    my_call: str | None
+    my_grid: str | None
+    exchange_sent: str | None
+    exchange_rcvd: str | None
+    adif_prop_mode: str | None
+
+
+def decode_qso_logged(header: Header, r: QDataStreamReader) -> QsoLoggedPacket:
+    return QsoLoggedPacket(
+        schema=header.schema,
+        type=header.type,
+        id=r.read_utf8(),
+        time_off=r.read_qdatetime(),
+        dx_call=r.read_utf8(),
+        dx_grid=r.read_utf8(),
+        dial_freq_hz=r.read_u64(),
+        mode=r.read_utf8(),
+        report_sent=r.read_utf8(),
+        report_rcvd=r.read_utf8(),
+        tx_power=r.read_utf8(),
+        comments=r.read_utf8(),
+        name=r.read_utf8(),
+        time_on=r.read_qdatetime(),
+        operator_call=r.read_utf8(),
+        my_call=r.read_utf8(),
+        my_grid=r.read_utf8(),
+        exchange_sent=r.read_utf8() if r.remaining() > 0 else None,
+        exchange_rcvd=r.read_utf8() if r.remaining() > 0 else None,
+        adif_prop_mode=r.read_utf8() if r.remaining() > 0 else None,
+    )
+
+
 def decode_packet(
     r: QDataStreamReader,
-) -> HeartbeatPacket | StatusPacket | DecodePacket | ClearPacket:
+) -> HeartbeatPacket | StatusPacket | DecodePacket | ClearPacket | QsoLoggedPacket:
     try:
         header = decode_header(r)
         if header.schema not in SUPPORTED_SCHEMAS:
@@ -207,6 +258,8 @@ def decode_packet(
             return decode_decode(header, r)
         if header.type == CLEAR_TYPE:
             return decode_clear(header, r)
+        if header.type == QSO_LOGGED_TYPE:
+            return decode_qso_logged(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise

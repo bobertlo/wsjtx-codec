@@ -251,13 +251,13 @@ QDATETIME_READER_CASES = [
         "remaining": 0,
     },
     {
-        "input": qdatetime(_JDN_20201030, 41397320, 1),  # sub-second ms truncated
-        "expected": datetime(2020, 10, 30, 11, 29, 57, tzinfo=timezone.utc),
+        "input": qdatetime(_JDN_20201030, 41397320, 1),
+        "expected": datetime(2020, 10, 30, 11, 29, 57, 320000, tzinfo=timezone.utc),
         "remaining": 0,
     },
     {
         "input": qdatetime(_JDN_20201030, 41337320, 1),
-        "expected": datetime(2020, 10, 30, 11, 28, 57, tzinfo=timezone.utc),
+        "expected": datetime(2020, 10, 30, 11, 28, 57, 320000, tzinfo=timezone.utc),
         "remaining": 0,
     },
     {"input": qdatetime(_J2000, 0, 0), "expected": datetime(2000, 1, 1)},

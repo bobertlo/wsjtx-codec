@@ -66,16 +66,26 @@ class QDataStreamReader:
         minute = ms // 60000
         ms %= 60000
         second = ms // 1000
+        microsecond = (ms % 1000) * 1000
 
         if timespec == 0:
-            return datetime(d.year, d.month, d.day, hour, minute, second)
+            return datetime(d.year, d.month, d.day, hour, minute, second, microsecond)
         if timespec == 1:
             return datetime(
-                d.year, d.month, d.day, hour, minute, second, tzinfo=timezone.utc
+                d.year,
+                d.month,
+                d.day,
+                hour,
+                minute,
+                second,
+                microsecond,
+                tzinfo=timezone.utc,
             )
         if timespec == 2:
             tz = timezone(timedelta(seconds=self.read_i32()))
-            return datetime(d.year, d.month, d.day, hour, minute, second, tzinfo=tz)
+            return datetime(
+                d.year, d.month, d.day, hour, minute, second, microsecond, tzinfo=tz
+            )
         raise ValueError(f"unsupported QDateTime timespec {timespec}")
 
     def remaining(self) -> int:
