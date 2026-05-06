@@ -10,6 +10,7 @@ MAGIC = 0xADBCCBDA
 HEARTBEAT_TYPE = 0
 STATUS_TYPE = 1
 DECODE_TYPE = 2
+CLEAR_TYPE = 3
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -180,9 +181,20 @@ def decode_decode(header: Header, r: QDataStreamReader) -> DecodePacket:
     )
 
 
+@dataclass
+class ClearPacket:
+    schema: int
+    type: int
+    id: str | None
+
+
+def decode_clear(header: Header, r: QDataStreamReader) -> ClearPacket:
+    return ClearPacket(schema=header.schema, type=header.type, id=r.read_utf8())
+
+
 def decode_packet(
     r: QDataStreamReader,
-) -> HeartbeatPacket | StatusPacket | DecodePacket:
+) -> HeartbeatPacket | StatusPacket | DecodePacket | ClearPacket:
     try:
         header = decode_header(r)
         if header.schema not in SUPPORTED_SCHEMAS:
@@ -193,6 +205,8 @@ def decode_packet(
             return decode_status(header, r)
         if header.type == DECODE_TYPE:
             return decode_decode(header, r)
+        if header.type == CLEAR_TYPE:
+            return decode_clear(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise
