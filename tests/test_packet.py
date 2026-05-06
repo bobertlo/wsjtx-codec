@@ -7,6 +7,7 @@ import struct
 import pytest
 
 from wsjtx_codec.packet import (
+    ClearPacket,
     DecodePacket,
     HeartbeatPacket,
     MalformedPacket,
@@ -107,6 +108,10 @@ PACKET_CASES = [
             low_confidence=False,
             off_air=False,
         ),
+    },
+    {
+        "input": bytes.fromhex("adbccbda00000002000000030000000657534a542d58"),
+        "expected": ClearPacket(schema=2, type=3, id="WSJT-X"),
     },
 ]
 
