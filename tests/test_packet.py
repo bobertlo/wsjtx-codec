@@ -9,6 +9,7 @@ import pytest
 from wsjtx_codec.packet import (
     HeartbeatPacket,
     MalformedPacket,
+    StatusPacket,
     UnknownMessageType,
     UnsupportedSchemaVersion,
     decode_packet,
@@ -29,6 +30,54 @@ PACKET_CASES = [
         ),
         "expected": HeartbeatPacket(
             schema=2, type=0, id="WSJT-X", max_schema=3, version="2.7.0", revision=""
+        ),
+    },
+    {
+        "input": bytes.fromhex(
+            "adbccbda00000002000000010000000657534a542d58"
+            "00000000006bf0d0"
+            "00000003465438"
+            "000000064b4935564843"
+            "000000022d38"
+            "00000003465438"
+            "010000"
+            "00000744000009a0"
+            "000000064b4630554e4b"
+            "00000006454e33344a57"
+            "00000004454d3033"
+            "00"
+            "ffffffff"
+            "0000"
+            "ffffffffffffffff"
+            "00000003473930"
+            "000000254351204b4630554e4b20454e3334"
+            "2020202020202020202020202020202020202020202020"
+        ),
+        "expected": StatusPacket(
+            schema=2,
+            type=1,
+            id="WSJT-X",
+            dial_freq_hz=7074000,
+            mode="FT8",
+            dx_call="KI5VHC",
+            report="-8",
+            tx_mode="FT8",
+            tx_enabled=True,
+            transmitting=False,
+            decoding=False,
+            rx_df=1860,
+            tx_df=2464,
+            de_call="KF0UNK",
+            de_grid="EN34JW",
+            dx_grid="EM03",
+            tx_watchdog=False,
+            sub_mode=None,
+            fast_mode=False,
+            special_op_mode=0,
+            freq_tolerance=None,
+            tr_period=None,
+            config_name="G90",
+            tx_message="CQ KF0UNK EN34                       ",
         ),
     },
 ]

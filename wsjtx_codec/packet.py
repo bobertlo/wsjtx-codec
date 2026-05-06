@@ -8,6 +8,7 @@ from wsjtx_codec.qdatastream import QDataStreamReader
 
 MAGIC = 0xADBCCBDA
 HEARTBEAT_TYPE = 0
+STATUS_TYPE = 1
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -65,13 +66,95 @@ def decode_heartbeat(header: Header, r: QDataStreamReader) -> HeartbeatPacket:
     )
 
 
-def decode_packet(r: QDataStreamReader) -> HeartbeatPacket:
+@dataclass
+class StatusPacket:
+    schema: int
+    type: int
+    id: str | None
+    dial_freq_hz: int
+    mode: str | None
+    dx_call: str | None
+    report: str | None
+    tx_mode: str | None
+    tx_enabled: bool
+    transmitting: bool
+    decoding: bool
+    rx_df: int
+    tx_df: int
+    de_call: str | None
+    de_grid: str | None
+    dx_grid: str | None
+    tx_watchdog: bool
+    sub_mode: str | None
+    fast_mode: bool
+    special_op_mode: int
+    freq_tolerance: int | None
+    tr_period: int | None
+    config_name: str | None
+    tx_message: str | None
+
+
+def decode_status(header: Header, r: QDataStreamReader) -> StatusPacket:
+    id = r.read_utf8()
+    dial_freq_hz = r.read_u64()
+    mode = r.read_utf8()
+    dx_call = r.read_utf8()
+    report = r.read_utf8()
+    tx_mode = r.read_utf8()
+    tx_enabled = r.read_bool()
+    transmitting = r.read_bool()
+    decoding = r.read_bool()
+    rx_df = r.read_u32()
+    tx_df = r.read_u32()
+    de_call = r.read_utf8()
+    de_grid = r.read_utf8()
+    dx_grid = r.read_utf8()
+    tx_watchdog = r.read_bool()
+    sub_mode = r.read_utf8()
+    fast_mode = r.read_bool()
+    special_op_mode = r.read_u8()
+    freq_tol_raw = r.read_u32()
+    tr_period_raw = r.read_u32()
+    config_name = r.read_utf8()
+    tx_message = r.read_utf8()
+
+    return StatusPacket(
+        schema=header.schema,
+        type=header.type,
+        id=id,
+        dial_freq_hz=dial_freq_hz,
+        mode=mode,
+        dx_call=dx_call,
+        report=report,
+        tx_mode=tx_mode,
+        tx_enabled=tx_enabled,
+        transmitting=transmitting,
+        decoding=decoding,
+        rx_df=rx_df,
+        tx_df=tx_df,
+        de_call=de_call,
+        de_grid=de_grid,
+        dx_grid=dx_grid,
+        tx_watchdog=tx_watchdog,
+        sub_mode=sub_mode,
+        fast_mode=fast_mode,
+        special_op_mode=special_op_mode,
+        freq_tolerance=None if freq_tol_raw == 0xFFFFFFFF else freq_tol_raw,
+        tr_period=None if tr_period_raw == 0xFFFFFFFF else tr_period_raw,
+        config_name=config_name,
+        tx_message=tx_message,
+    )
+
+
+def decode_packet(r: QDataStreamReader) -> HeartbeatPacket | StatusPacket:
     try:
         header = decode_header(r)
         if header.schema not in SUPPORTED_SCHEMAS:
             raise UnsupportedSchemaVersion(header.schema)
         if header.type == HEARTBEAT_TYPE:
             return decode_heartbeat(header, r)
+        if header.type == STATUS_TYPE:
+            return decode_status(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise

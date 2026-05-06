@@ -23,8 +23,16 @@ def i64(n: int) -> bytes:
     return struct.pack(">q", n)
 
 
+def u64(n: int) -> bytes:
+    return struct.pack(">Q", n)
+
+
 def f64(n: float) -> bytes:
     return struct.pack(">d", n)
+
+
+def bool_byte(b: bool) -> bytes:
+    return b"\x01" if b else b"\x00"
 
 
 def qt_string(s: str | None) -> bytes:
