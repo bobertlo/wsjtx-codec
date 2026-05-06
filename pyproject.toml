@@ -15,10 +15,20 @@ testpaths = ["tests"]
 [tool.hatch.build.targets.wheel]
 packages = ["wsjtx_codec"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "venv",
+    ".venv/",
+    "dist/",
+    "*.egg-info/",
+]
+
 [project.optional-dependencies]
 dev = [
     "ruff>=0.4.0",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
+    "build",
+    "twine",
 ]
 
