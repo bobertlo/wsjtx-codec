@@ -3,6 +3,7 @@ qdatastream_helpers.py - helper functions to mock input
 """
 
 import struct
+from datetime import datetime
 
 from wsjtx_codec.qdatastream import QDataStreamReader
 
@@ -33,6 +34,13 @@ def f64(n: float) -> bytes:
 
 def bool_byte(b: bool) -> bytes:
     return b"\x01" if b else b"\x00"
+
+
+def qdatetime_utc(dt: datetime) -> bytes:
+    _JDN_ORDINAL_OFFSET = 1721425
+    jdn = dt.toordinal() + _JDN_ORDINAL_OFFSET
+    ms = (dt.hour * 3600 + dt.minute * 60 + dt.second) * 1000 + (dt.microsecond // 1000)
+    return i64(jdn) + u32(ms) + b"\x01"
 
 
 def qt_string(s: str | None) -> bytes:

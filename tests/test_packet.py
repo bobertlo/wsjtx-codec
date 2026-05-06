@@ -3,6 +3,7 @@ test_packet.py — end-to-end decode_packet tests.
 """
 
 import struct
+from datetime import datetime, timezone
 
 import pytest
 
@@ -11,6 +12,7 @@ from wsjtx_codec.packet import (
     DecodePacket,
     HeartbeatPacket,
     MalformedPacket,
+    QsoLoggedPacket,
     StatusPacket,
     UnknownMessageType,
     UnsupportedSchemaVersion,
@@ -112,6 +114,49 @@ PACKET_CASES = [
     {
         "input": bytes.fromhex("adbccbda00000002000000030000000657534a542d58"),
         "expected": ClearPacket(schema=2, type=3, id="WSJT-X"),
+    },
+    {
+        "input": bytes.fromhex(
+            "adbccbda00000002000000050000000657534a542d58"
+            "0000000000258de80108d16c01"
+            "000000054e3556414e"
+            "00000004444e3931"
+            "00000000006bfa70"
+            "00000003465438"
+            "000000032d3130"
+            "000000032d3232"
+            "00000003323057"
+            "0000000000000000"
+            "0000000000258de80107ea7e01"
+            "00000000"
+            "000000064b4630554e4b"
+            "00000006454e33344a57"
+            "00000000"
+            "00000000"
+            "ffffffff"
+        ),
+        "expected": QsoLoggedPacket(
+            schema=2,
+            type=5,
+            id="WSJT-X",
+            time_off=datetime(2026, 4, 29, 4, 49, 15, 116000, tzinfo=timezone.utc),
+            dx_call="N5VAN",
+            dx_grid="DN91",
+            dial_freq_hz=7076464,
+            mode="FT8",
+            report_sent="-10",
+            report_rcvd="-22",
+            tx_power="20W",
+            comments="",
+            name="",
+            time_on=datetime(2026, 4, 29, 4, 48, 15, 998000, tzinfo=timezone.utc),
+            operator_call="",
+            my_call="KF0UNK",
+            my_grid="EN34JW",
+            exchange_sent="",
+            exchange_rcvd="",
+            adif_prop_mode=None,
+        ),
     },
 ]
 
