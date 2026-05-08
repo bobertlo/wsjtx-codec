@@ -13,6 +13,7 @@ STATUS_TYPE = 1
 DECODE_TYPE = 2
 CLEAR_TYPE = 3
 QSO_LOGGED_TYPE = 5
+CLOSE_TYPE = 6
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -195,6 +196,17 @@ def decode_clear(header: Header, r: QDataStreamReader) -> ClearPacket:
 
 
 @dataclass
+class ClosePacket:
+    schema: int
+    type: int
+    id: str | None
+
+
+def decode_close(header: Header, r: QDataStreamReader) -> ClosePacket:
+    return ClosePacket(schema=header.schema, type=header.type, id=r.read_utf8())
+
+
+@dataclass
 class QsoLoggedPacket:
     schema: int
     type: int
@@ -245,7 +257,14 @@ def decode_qso_logged(header: Header, r: QDataStreamReader) -> QsoLoggedPacket:
 
 def decode_packet(
     r: QDataStreamReader,
-) -> HeartbeatPacket | StatusPacket | DecodePacket | ClearPacket | QsoLoggedPacket:
+) -> (
+    HeartbeatPacket
+    | StatusPacket
+    | DecodePacket
+    | ClearPacket
+    | ClosePacket
+    | QsoLoggedPacket
+):
     try:
         header = decode_header(r)
         if header.schema not in SUPPORTED_SCHEMAS:
@@ -258,6 +277,8 @@ def decode_packet(
             return decode_decode(header, r)
         if header.type == CLEAR_TYPE:
             return decode_clear(header, r)
+        if header.type == CLOSE_TYPE:
+            return decode_close(header, r)
         if header.type == QSO_LOGGED_TYPE:
             return decode_qso_logged(header, r)
         raise UnknownMessageType(header.type)
