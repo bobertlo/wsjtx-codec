@@ -17,6 +17,7 @@ from wsjtx_codec.packet import (
     StatusPacket,
     UnknownMessageType,
     UnsupportedSchemaVersion,
+    WsprPacket,
     decode_packet,
 )
 from tests.qdatastream_helpers import reader, u32
@@ -161,6 +162,34 @@ PACKET_CASES = [
             exchange_sent="",
             exchange_rcvd="",
             adif_prop_mode=None,
+        ),
+    },
+    {
+        "input": bytes.fromhex(
+            "adbccbda000000020000000a0000000657534a542d58"
+            "0100a6a040ffffffe6"
+            "0000000000000000"
+            "00000000003679ee"
+            "00000000"
+            "000000054e35435858"
+            "00000004454d3132"
+            "00000017"
+            "00"
+        ),
+        "expected": WsprPacket(
+            schema=2,
+            type=10,
+            id="WSJT-X",
+            new=True,
+            time_ms=10920000,
+            snr=-26,
+            delta_time_s=0.0,
+            freq_hz=3570158,
+            drift=0,
+            callsign="N5CXX",
+            grid="EM12",
+            power_dbm=23,
+            off_air=False,
         ),
     },
 ]
