@@ -14,6 +14,7 @@ DECODE_TYPE = 2
 CLEAR_TYPE = 3
 QSO_LOGGED_TYPE = 5
 CLOSE_TYPE = 6
+WSPR_TYPE = 10
 SUPPORTED_SCHEMAS = {2}
 
 
@@ -255,6 +256,41 @@ def decode_qso_logged(header: Header, r: QDataStreamReader) -> QsoLoggedPacket:
     )
 
 
+@dataclass
+class WsprPacket:
+    schema: int
+    type: int
+    id: str | None
+    new: bool
+    time_ms: int
+    snr: int
+    delta_time_s: float
+    freq_hz: int
+    drift: int
+    callsign: str | None
+    grid: str | None
+    power_dbm: int
+    off_air: bool
+
+
+def decode_wspr(header: Header, r: QDataStreamReader) -> WsprPacket:
+    return WsprPacket(
+        schema=header.schema,
+        type=header.type,
+        id=r.read_utf8(),
+        new=r.read_bool(),
+        time_ms=r.read_u32(),
+        snr=r.read_i32(),
+        delta_time_s=r.read_f64(),
+        freq_hz=r.read_u64(),
+        drift=r.read_i32(),
+        callsign=r.read_utf8(),
+        grid=r.read_utf8(),
+        power_dbm=r.read_i32(),
+        off_air=r.read_bool(),
+    )
+
+
 def decode_packet(
     r: QDataStreamReader,
 ) -> (
@@ -264,6 +300,7 @@ def decode_packet(
     | ClearPacket
     | ClosePacket
     | QsoLoggedPacket
+    | WsprPacket
 ):
     try:
         header = decode_header(r)
@@ -281,6 +318,8 @@ def decode_packet(
             return decode_close(header, r)
         if header.type == QSO_LOGGED_TYPE:
             return decode_qso_logged(header, r)
+        if header.type == WSPR_TYPE:
+            return decode_wspr(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise
