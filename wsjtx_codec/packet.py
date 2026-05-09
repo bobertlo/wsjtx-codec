@@ -7,15 +7,18 @@ from datetime import datetime
 
 from wsjtx_codec.qdatastream import QDataStreamReader
 
-MAGIC = 0xADBCCBDA
-HEARTBEAT_TYPE = 0
-STATUS_TYPE = 1
-DECODE_TYPE = 2
-CLEAR_TYPE = 3
-QSO_LOGGED_TYPE = 5
-CLOSE_TYPE = 6
-WSPR_TYPE = 10
-SUPPORTED_SCHEMAS = {2}
+_MAGIC = 0xADBCCBDA
+_HEARTBEAT_TYPE = 0
+_STATUS_TYPE = 1
+_DECODE_TYPE = 2
+_CLEAR_TYPE = 3
+_QSO_LOGGED_TYPE = 5
+_CLOSE_TYPE = 6
+_WSPR_TYPE = 10
+_SUPPORTED_SCHEMAS = {2}
+
+# Qt QDataStream format version used by WSJT-X
+_QT_STREAM_VERSION = 18
 
 
 class WsjtxDecodeError(Exception):
@@ -23,6 +26,8 @@ class WsjtxDecodeError(Exception):
 
 
 class UnknownMessageType(WsjtxDecodeError):
+    """Raised when the packet type field is not recognised."""
+
     def __init__(self, message_type: int):
         self.message_type = message_type
         super().__init__(f"unknown message type: {message_type}")
@@ -33,26 +38,30 @@ class MalformedPacket(WsjtxDecodeError):
 
 
 class UnsupportedSchemaVersion(WsjtxDecodeError):
+    """Raised when the schema version in the packet header is not supported."""
+
     def __init__(self, version: int):
         self.version = version
         super().__init__(f"unsupported schema version: {version}")
 
 
 @dataclass
-class Header:
+class _Header:
     schema: int
     type: int
 
 
-def decode_header(r: QDataStreamReader) -> Header:
+def _decode_header(r: QDataStreamReader) -> _Header:
     magic = r.read_u32()
-    if magic != MAGIC:
+    if magic != _MAGIC:
         raise ValueError(f"bad magic number: {magic:#010x}")
-    return Header(schema=r.read_u32(), type=r.read_u32())
+    return _Header(schema=r.read_u32(), type=r.read_u32())
 
 
 @dataclass
 class HeartbeatPacket:
+    """Periodic keep-alive sent by WSJT-X to announce its presence and version."""
+
     schema: int
     type: int
     id: str | None
@@ -61,7 +70,7 @@ class HeartbeatPacket:
     revision: str | None
 
 
-def decode_heartbeat(header: Header, r: QDataStreamReader) -> HeartbeatPacket:
+def _decode_heartbeat(header: _Header, r: QDataStreamReader) -> HeartbeatPacket:
     return HeartbeatPacket(
         schema=header.schema,
         type=header.type,
@@ -74,6 +83,8 @@ def decode_heartbeat(header: Header, r: QDataStreamReader) -> HeartbeatPacket:
 
 @dataclass
 class StatusPacket:
+    """Radio and operating state — frequency, mode, callsigns, TX/RX flags."""
+
     schema: int
     type: int
     id: str | None
@@ -100,7 +111,7 @@ class StatusPacket:
     tx_message: str | None
 
 
-def decode_status(header: Header, r: QDataStreamReader) -> StatusPacket:
+def _decode_status(header: _Header, r: QDataStreamReader) -> StatusPacket:
     id = r.read_utf8()
     dial_freq_hz = r.read_u64()
     mode = r.read_utf8()
@@ -154,6 +165,8 @@ def decode_status(header: Header, r: QDataStreamReader) -> StatusPacket:
 
 @dataclass
 class DecodePacket:
+    """A decoded message received by WSJT-X, with SNR and timing metadata."""
+
     schema: int
     type: int
     id: str | None
@@ -168,7 +181,7 @@ class DecodePacket:
     off_air: bool
 
 
-def decode_decode(header: Header, r: QDataStreamReader) -> DecodePacket:
+def _decode_decode(header: _Header, r: QDataStreamReader) -> DecodePacket:
     return DecodePacket(
         schema=header.schema,
         type=header.type,
@@ -187,28 +200,34 @@ def decode_decode(header: Header, r: QDataStreamReader) -> DecodePacket:
 
 @dataclass
 class ClearPacket:
+    """Instructs a client to clear its decode list."""
+
     schema: int
     type: int
     id: str | None
 
 
-def decode_clear(header: Header, r: QDataStreamReader) -> ClearPacket:
+def _decode_clear(header: _Header, r: QDataStreamReader) -> ClearPacket:
     return ClearPacket(schema=header.schema, type=header.type, id=r.read_utf8())
 
 
 @dataclass
 class ClosePacket:
+    """Sent by WSJT-X on shutdown."""
+
     schema: int
     type: int
     id: str | None
 
 
-def decode_close(header: Header, r: QDataStreamReader) -> ClosePacket:
+def _decode_close(header: _Header, r: QDataStreamReader) -> ClosePacket:
     return ClosePacket(schema=header.schema, type=header.type, id=r.read_utf8())
 
 
 @dataclass
 class QsoLoggedPacket:
+    """Logged QSO record emitted when WSJT-X saves a contact."""
+
     schema: int
     type: int
     id: str | None
@@ -231,7 +250,7 @@ class QsoLoggedPacket:
     adif_prop_mode: str | None
 
 
-def decode_qso_logged(header: Header, r: QDataStreamReader) -> QsoLoggedPacket:
+def _decode_qso_logged(header: _Header, r: QDataStreamReader) -> QsoLoggedPacket:
     return QsoLoggedPacket(
         schema=header.schema,
         type=header.type,
@@ -258,6 +277,8 @@ def decode_qso_logged(header: Header, r: QDataStreamReader) -> QsoLoggedPacket:
 
 @dataclass
 class WsprPacket:
+    """A WSPR decode received by WSJT-X."""
+
     schema: int
     type: int
     id: str | None
@@ -273,7 +294,7 @@ class WsprPacket:
     off_air: bool
 
 
-def decode_wspr(header: Header, r: QDataStreamReader) -> WsprPacket:
+def _decode_wspr(header: _Header, r: QDataStreamReader) -> WsprPacket:
     return WsprPacket(
         schema=header.schema,
         type=header.type,
@@ -292,7 +313,7 @@ def decode_wspr(header: Header, r: QDataStreamReader) -> WsprPacket:
 
 
 def decode_packet(
-    r: QDataStreamReader,
+    data: bytes,
 ) -> (
     HeartbeatPacket
     | StatusPacket
@@ -302,24 +323,32 @@ def decode_packet(
     | QsoLoggedPacket
     | WsprPacket
 ):
+    """Decode a raw WSJT-X UDP packet.
+
+    Raises:
+        MalformedPacket: wrong magic, truncated buffer, bad encoding.
+        UnsupportedSchemaVersion: schema version not in the supported set.
+        UnknownMessageType: packet type field is not recognised.
+    """
+    r = QDataStreamReader(data, version=_QT_STREAM_VERSION)
     try:
-        header = decode_header(r)
-        if header.schema not in SUPPORTED_SCHEMAS:
+        header = _decode_header(r)
+        if header.schema not in _SUPPORTED_SCHEMAS:
             raise UnsupportedSchemaVersion(header.schema)
-        if header.type == HEARTBEAT_TYPE:
-            return decode_heartbeat(header, r)
-        if header.type == STATUS_TYPE:
-            return decode_status(header, r)
-        if header.type == DECODE_TYPE:
-            return decode_decode(header, r)
-        if header.type == CLEAR_TYPE:
-            return decode_clear(header, r)
-        if header.type == CLOSE_TYPE:
-            return decode_close(header, r)
-        if header.type == QSO_LOGGED_TYPE:
-            return decode_qso_logged(header, r)
-        if header.type == WSPR_TYPE:
-            return decode_wspr(header, r)
+        if header.type == _HEARTBEAT_TYPE:
+            return _decode_heartbeat(header, r)
+        if header.type == _STATUS_TYPE:
+            return _decode_status(header, r)
+        if header.type == _DECODE_TYPE:
+            return _decode_decode(header, r)
+        if header.type == _CLEAR_TYPE:
+            return _decode_clear(header, r)
+        if header.type == _CLOSE_TYPE:
+            return _decode_close(header, r)
+        if header.type == _QSO_LOGGED_TYPE:
+            return _decode_qso_logged(header, r)
+        if header.type == _WSPR_TYPE:
+            return _decode_wspr(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise

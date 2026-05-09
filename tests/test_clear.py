@@ -4,11 +4,11 @@ test_clear.py — pytest harness for WSJT-X clear packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import ClearPacket, Header, decode_clear
+from wsjtx_codec.packet import ClearPacket, _Header, _decode_clear
 from tests.qdatastream_helpers import qt_string, reader
 
 
-DUMMY_HEADER = Header(schema=2, type=3)
+DUMMY_HEADER = _Header(schema=2, type=3)
 
 CLEAR_CASES = [
     # Real packet body captured from a live WSJT-X instance
@@ -40,9 +40,9 @@ CLEAR_CASES = [
 
 
 @pytest.mark.parametrize("case", CLEAR_CASES)
-def test_decode_clear(case):
+def test__decode_clear(case):
     r = reader(case["input"])
-    out = decode_clear(case["header"], r)
+    out = _decode_clear(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -51,4 +51,4 @@ def test_decode_clear(case):
 def test_decode_clear_truncated():
     # 4-byte length prefix present but id bytes cut short
     with pytest.raises(EOFError):
-        decode_clear(DUMMY_HEADER, reader(b"\x00\x00\x00\x06\x57\x53"))
+        _decode_clear(DUMMY_HEADER, reader(b"\x00\x00\x00\x06\x57\x53"))

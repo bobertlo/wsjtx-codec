@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from wsjtx_codec.packet import Header, QsoLoggedPacket, decode_qso_logged
+from wsjtx_codec.packet import _Header, QsoLoggedPacket, _decode_qso_logged
 from tests.qdatastream_helpers import (
     qdatetime_utc,
     qt_string,
@@ -15,7 +15,7 @@ from tests.qdatastream_helpers import (
 )
 
 
-DUMMY_HEADER = Header(schema=2, type=5)
+DUMMY_HEADER = _Header(schema=2, type=5)
 
 # Sentinel meaning "omit this field from the packet bytes entirely"
 _ABSENT = object()
@@ -301,9 +301,9 @@ QSO_LOGGED_CASES = [
 
 
 @pytest.mark.parametrize("case", QSO_LOGGED_CASES)
-def test_decode_qso_logged(case):
+def test__decode_qso_logged(case):
     r = reader(case["input"])
-    out = decode_qso_logged(case["header"], r)
+    out = _decode_qso_logged(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -312,7 +312,7 @@ def test_decode_qso_logged(case):
 def test_decode_qso_logged_truncated_in_time_off():
     # id present, then only 4 of the 8 JDN bytes for time_off
     with pytest.raises(EOFError):
-        decode_qso_logged(
+        _decode_qso_logged(
             DUMMY_HEADER, reader(qt_string("WSJT-X") + b"\x00\x00\x00\x00")
         )
 
@@ -320,7 +320,7 @@ def test_decode_qso_logged_truncated_in_time_off():
 def test_decode_qso_logged_truncated_in_dial_freq():
     # All fields through dx_grid present, then only 4 of the 8 dial_freq_hz bytes
     with pytest.raises(EOFError):
-        decode_qso_logged(
+        _decode_qso_logged(
             DUMMY_HEADER,
             reader(
                 qt_string("WSJT-X")

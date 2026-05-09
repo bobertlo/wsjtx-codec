@@ -4,11 +4,11 @@ test_close.py — pytest harness for WSJT-X close packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import ClosePacket, Header, decode_close
+from wsjtx_codec.packet import ClosePacket, _Header, _decode_close
 from tests.qdatastream_helpers import qt_string, reader
 
 
-DUMMY_HEADER = Header(schema=2, type=6)
+DUMMY_HEADER = _Header(schema=2, type=6)
 
 CLOSE_CASES = [
     # Real packet body captured from a live WSJT-X instance
@@ -40,9 +40,9 @@ CLOSE_CASES = [
 
 
 @pytest.mark.parametrize("case", CLOSE_CASES)
-def test_decode_close(case):
+def test__decode_close(case):
     r = reader(case["input"])
-    out = decode_close(case["header"], r)
+    out = _decode_close(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -51,4 +51,4 @@ def test_decode_close(case):
 def test_decode_close_truncated():
     # 4-byte length prefix present but id bytes cut short
     with pytest.raises(EOFError):
-        decode_close(DUMMY_HEADER, reader(b"\x00\x00\x00\x06\x57\x53"))
+        _decode_close(DUMMY_HEADER, reader(b"\x00\x00\x00\x06\x57\x53"))
