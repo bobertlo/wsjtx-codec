@@ -15,6 +15,7 @@ _CLEAR_TYPE = 3
 _QSO_LOGGED_TYPE = 5
 _CLOSE_TYPE = 6
 _WSPR_TYPE = 10
+_LOGGED_ADIF_TYPE = 12
 _SUPPORTED_SCHEMAS = {2}
 
 
@@ -323,6 +324,30 @@ def _decode_wspr(header: _Header, r: QDataStreamReader) -> WsprPacket:
     )
 
 
+@dataclass
+class LoggedAdifPacket:
+    """ADIF-formatted log record emitted when the user accepts the Log QSO dialog.
+
+    ``adif_text`` is a valid ADIF file fragment (fields through ``<EOR>``) that
+    can be appended to a standard ADIF header to form a complete single-record
+    ADIF file without further parsing.
+    """
+
+    schema: int
+    type: int
+    id: str | None
+    adif_text: str | None
+
+
+def _decode_logged_adif(header: _Header, r: QDataStreamReader) -> LoggedAdifPacket:
+    return LoggedAdifPacket(
+        schema=header.schema,
+        type=header.type,
+        id=r.read_utf8(),
+        adif_text=r.read_utf8(),
+    )
+
+
 def decode_packet(
     data: bytes,
 ) -> (
@@ -333,6 +358,7 @@ def decode_packet(
     | ClosePacket
     | QsoLoggedPacket
     | WsprPacket
+    | LoggedAdifPacket
 ):
     """Decode a raw WSJT-X UDP packet.
 
@@ -360,6 +386,8 @@ def decode_packet(
             return _decode_qso_logged(header, r)
         if header.type == _WSPR_TYPE:
             return _decode_wspr(header, r)
+        if header.type == _LOGGED_ADIF_TYPE:
+            return _decode_logged_adif(header, r)
         raise UnknownMessageType(header.type)
     except WsjtxDecodeError:
         raise
