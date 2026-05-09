@@ -200,15 +200,29 @@ def _decode_decode(header: _Header, r: QDataStreamReader) -> DecodePacket:
 
 @dataclass
 class ClearPacket:
-    """Instructs a client to clear its decode list."""
+    """Emitted by WSJT-X when prior decodes are discarded from the Band Activity
+    window (on user erase or normal shutdown); the receiver should discard all
+    buffered decode messages.
+
+    May also be sent *to* a WSJT-X instance to command it to clear one or both
+    windows.  In that direction ``window`` is required: 0=Band Activity,
+    1=Rx Frequency, 2=Both.  ``window`` is absent (``None``) in the WSJT-X →
+    client direction.
+    """
 
     schema: int
     type: int
     id: str | None
+    window: int | None = None
 
 
 def _decode_clear(header: _Header, r: QDataStreamReader) -> ClearPacket:
-    return ClearPacket(schema=header.schema, type=header.type, id=r.read_utf8())
+    return ClearPacket(
+        schema=header.schema,
+        type=header.type,
+        id=r.read_utf8(),
+        window=r.read_u8() if r.remaining() > 0 else None,
+    )
 
 
 @dataclass
