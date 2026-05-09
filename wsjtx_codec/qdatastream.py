@@ -1,5 +1,5 @@
 """
-QDataStreamReader — minimal Qt QDataStream wire-format reader.
+QDataStreamReader and QDataStreamWriter — Qt QDataStream wire-format codec.
 """
 
 import struct
@@ -96,3 +96,55 @@ class QDataStreamReader:
             raise ValueError(
                 f"{self.remaining()} unconsumed byte(s) at offset {self.offset}"
             )
+
+
+class QDataStreamWriter:
+    def __init__(self) -> None:
+        self._buf = bytearray()
+
+    def write_u8(self, n: int) -> None:
+        self._buf.extend(struct.pack(">B", n))
+
+    def write_bool(self, b: bool) -> None:
+        self._buf.extend(b"\x01" if b else b"\x00")
+
+    def write_u32(self, n: int) -> None:
+        self._buf.extend(struct.pack(">I", n))
+
+    def write_i32(self, n: int) -> None:
+        self._buf.extend(struct.pack(">i", n))
+
+    def write_i64(self, n: int) -> None:
+        self._buf.extend(struct.pack(">q", n))
+
+    def write_u64(self, n: int) -> None:
+        self._buf.extend(struct.pack(">Q", n))
+
+    def write_f64(self, n: float) -> None:
+        self._buf.extend(struct.pack(">d", n))
+
+    def write_utf8(self, s: str | None) -> None:
+        if s is None:
+            self._buf.extend(b"\xff\xff\xff\xff")
+        else:
+            encoded = s.encode("utf-8")
+            self._buf.extend(struct.pack(">I", len(encoded)))
+            self._buf.extend(encoded)
+
+    def write_qdatetime(self, dt: datetime) -> None:
+        jdn = dt.toordinal() + _JDN_ORDINAL_OFFSET
+        ms = (
+            dt.hour * 3600 + dt.minute * 60 + dt.second
+        ) * 1000 + dt.microsecond // 1000
+        self.write_i64(jdn)
+        self.write_u32(ms)
+        if dt.tzinfo is None:
+            self.write_u8(0)
+        elif dt.tzinfo == timezone.utc:
+            self.write_u8(1)
+        else:
+            self.write_u8(2)
+            self.write_i32(int(dt.utcoffset().total_seconds()))
+
+    def getvalue(self) -> bytes:
+        return bytes(self._buf)
