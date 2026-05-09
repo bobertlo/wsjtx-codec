@@ -4,10 +4,10 @@ test_status.py — pytest harness for WSJT-X status packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import Header, StatusPacket, decode_status
+from wsjtx_codec.packet import _Header, StatusPacket, _decode_status
 from tests.qdatastream_helpers import bool_byte, qt_string, reader, u32, u64
 
-DUMMY_HEADER = Header(schema=2, type=1)
+DUMMY_HEADER = _Header(schema=2, type=1)
 
 
 def status_bytes(
@@ -338,9 +338,9 @@ STATUS_CASES = [
 
 
 @pytest.mark.parametrize("case", STATUS_CASES)
-def test_decode_status(case):
+def test__decode_status(case):
     r = reader(case["input"])
-    out = decode_status(case["header"], r)
+    out = _decode_status(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -348,14 +348,14 @@ def test_decode_status(case):
 
 def test_decode_status_truncated_in_dial_freq():
     with pytest.raises(EOFError):
-        decode_status(DUMMY_HEADER, reader(qt_string("WSJT-X") + b"\x00\x00"))
+        _decode_status(DUMMY_HEADER, reader(qt_string("WSJT-X") + b"\x00\x00"))
 
 
 def test_decode_status_truncated_in_booleans():
     # 10 (id) + 8 (dial_freq) + 7 (mode) + 4 (dx_call=None) + 4 (report=None)
     # + 7 (tx_mode) + 1 (tx_enabled) = 41 bytes; next read for 'transmitting' will underflow
     with pytest.raises(EOFError):
-        decode_status(
+        _decode_status(
             DUMMY_HEADER,
             reader(
                 qt_string("WSJT-X")

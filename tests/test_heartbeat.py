@@ -4,7 +4,7 @@ test_packet.py — pytest harness for WSJT-X packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import Header, HeartbeatPacket, decode_heartbeat
+from wsjtx_codec.packet import _Header, HeartbeatPacket, _decode_heartbeat
 from tests.qdatastream_helpers import reader, u32, qt_string
 
 
@@ -14,7 +14,7 @@ def heartbeat_bytes(
     return qt_string(id) + u32(max_schema) + qt_string(version) + qt_string(revision)
 
 
-DUMMY_HEADER = Header(schema=2, type=0)
+DUMMY_HEADER = _Header(schema=2, type=0)
 
 HEARTBEAT_CASES = [
     {
@@ -61,9 +61,9 @@ HEARTBEAT_CASES = [
 
 
 @pytest.mark.parametrize("case", HEARTBEAT_CASES)
-def test_decode_heartbeat(case):
+def test__decode_heartbeat(case):
     r = reader(case["input"])
-    out = decode_heartbeat(case["header"], r)
+    out = _decode_heartbeat(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -71,9 +71,9 @@ def test_decode_heartbeat(case):
 
 def test_decode_heartbeat_truncated_id():
     with pytest.raises(EOFError):
-        decode_heartbeat(DUMMY_HEADER, reader(b"\x00\x00"))
+        _decode_heartbeat(DUMMY_HEADER, reader(b"\x00\x00"))
 
 
 def test_decode_heartbeat_truncated_max_schema():
     with pytest.raises(EOFError):
-        decode_heartbeat(DUMMY_HEADER, reader(qt_string("WSJT-X") + b"\x00\x00"))
+        _decode_heartbeat(DUMMY_HEADER, reader(qt_string("WSJT-X") + b"\x00\x00"))

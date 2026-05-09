@@ -4,11 +4,11 @@ test_decode.py — pytest harness for WSJT-X decode packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import DecodePacket, Header, decode_decode
+from wsjtx_codec.packet import DecodePacket, _Header, _decode_decode
 from tests.qdatastream_helpers import bool_byte, f64, i32, qt_string, reader, u32
 
 
-DUMMY_HEADER = Header(schema=2, type=2)
+DUMMY_HEADER = _Header(schema=2, type=2)
 
 
 def decode_bytes(
@@ -192,9 +192,9 @@ DECODE_CASES = [
 
 
 @pytest.mark.parametrize("case", DECODE_CASES)
-def test_decode_decode(case):
+def test__decode_decode(case):
     r = reader(case["input"])
-    out = decode_decode(case["header"], r)
+    out = _decode_decode(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -203,7 +203,7 @@ def test_decode_decode(case):
 def test_decode_decode_truncated_in_time_ms():
     # id + new byte present, then only 2 of the 4 time_ms bytes
     with pytest.raises(EOFError):
-        decode_decode(
+        _decode_decode(
             DUMMY_HEADER, reader(qt_string("WSJT-X") + bool_byte(True) + b"\x01\x0c")
         )
 
@@ -211,7 +211,7 @@ def test_decode_decode_truncated_in_time_ms():
 def test_decode_decode_truncated_in_delta_time_s():
     # All fields through snr present, then only 4 of the 8 delta_time_s bytes
     with pytest.raises(EOFError):
-        decode_decode(
+        _decode_decode(
             DUMMY_HEADER,
             reader(
                 qt_string("WSJT-X")

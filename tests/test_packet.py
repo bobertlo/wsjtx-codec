@@ -20,7 +20,7 @@ from wsjtx_codec.packet import (
     WsprPacket,
     decode_packet,
 )
-from tests.qdatastream_helpers import reader, u32
+from tests.qdatastream_helpers import u32
 
 MAGIC = struct.pack(">I", 0xADBCCBDA)
 
@@ -197,32 +197,32 @@ PACKET_CASES = [
 
 @pytest.mark.parametrize("case", PACKET_CASES)
 def test_decode_packet(case):
-    out = decode_packet(reader(case["input"]))
+    out = decode_packet(case["input"])
     assert out == case["expected"]
 
 
 def test_decode_packet_bad_magic():
     with pytest.raises(MalformedPacket):
-        decode_packet(reader(b"\x00\x00\x00\x00" + u32(2) + u32(0)))
+        decode_packet(b"\x00\x00\x00\x00" + u32(2) + u32(0))
 
 
 def test_decode_packet_truncated():
     with pytest.raises(MalformedPacket):
-        decode_packet(reader(MAGIC[:2]))
+        decode_packet(MAGIC[:2])
 
 
 def test_decode_packet_body_truncated():
     with pytest.raises(MalformedPacket):
-        decode_packet(reader(full_packet(2, 0, b"\x00\x00")))
+        decode_packet(full_packet(2, 0, b"\x00\x00"))
 
 
 def test_decode_packet_unknown_type():
     with pytest.raises(UnknownMessageType) as exc_info:
-        decode_packet(reader(full_packet(2, 99, b"")))
+        decode_packet(full_packet(2, 99, b""))
     assert exc_info.value.message_type == 99
 
 
 def test_decode_packet_unsupported_schema():
     with pytest.raises(UnsupportedSchemaVersion) as exc_info:
-        decode_packet(reader(full_packet(99, 0, b"")))
+        decode_packet(full_packet(99, 0, b""))
     assert exc_info.value.version == 99

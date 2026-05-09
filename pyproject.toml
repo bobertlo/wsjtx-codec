@@ -5,6 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "wsjtx_codec"
 version = "0.1.0"
+description = "Pure-Python decoder for the WSJT-X UDP protocol"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = []
 

@@ -4,7 +4,7 @@ test_wspr.py — pytest harness for WSJT-X WSPR decode packet decoding.
 
 import pytest
 
-from wsjtx_codec.packet import Header, WsprPacket, decode_wspr
+from wsjtx_codec.packet import _Header, WsprPacket, _decode_wspr
 from tests.qdatastream_helpers import (
     bool_byte,
     f64,
@@ -16,7 +16,7 @@ from tests.qdatastream_helpers import (
 )
 
 
-DUMMY_HEADER = Header(schema=2, type=10)
+DUMMY_HEADER = _Header(schema=2, type=10)
 
 
 def wspr_bytes(
@@ -211,9 +211,9 @@ WSPR_CASES = [
 
 
 @pytest.mark.parametrize("case", WSPR_CASES)
-def test_decode_wspr(case):
+def test__decode_wspr(case):
     r = reader(case["input"])
-    out = decode_wspr(case["header"], r)
+    out = _decode_wspr(case["header"], r)
     assert out == case["expected"]
     if case.get("remaining") is not None:
         assert r.remaining() == case["remaining"]
@@ -222,7 +222,7 @@ def test_decode_wspr(case):
 def test_decode_wspr_truncated():
     # id + new + time + snr + delta_time_s present, then only 4 of 8 freq_hz bytes
     with pytest.raises(EOFError):
-        decode_wspr(
+        _decode_wspr(
             DUMMY_HEADER,
             reader(
                 qt_string("WSJT-X")
