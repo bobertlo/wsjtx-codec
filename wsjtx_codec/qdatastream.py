@@ -9,10 +9,9 @@ _JDN_ORDINAL_OFFSET = 1721425  # JDN 1721426 == Python ordinal 1 (0001-01-01)
 
 
 class QDataStreamReader:
-    def __init__(self, data: bytes, *, version: int):
+    def __init__(self, data: bytes):
         self.data = memoryview(data)
         self.offset = 0
-        self.version = version
 
     def _read(self, n: int) -> memoryview:
         end = self.offset + n

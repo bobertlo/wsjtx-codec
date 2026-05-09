@@ -8,7 +8,7 @@ from wsjtx_codec.qdatastream import QDataStreamReader, QDataStreamWriter
 
 
 def reader(data: bytes) -> QDataStreamReader:
-    return QDataStreamReader(data, version=18)
+    return QDataStreamReader(data)
 
 
 def _w() -> QDataStreamWriter:

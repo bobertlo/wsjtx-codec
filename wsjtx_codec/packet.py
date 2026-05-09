@@ -17,9 +17,6 @@ _CLOSE_TYPE = 6
 _WSPR_TYPE = 10
 _SUPPORTED_SCHEMAS = {2}
 
-# Qt QDataStream format version used by WSJT-X
-_QT_STREAM_VERSION = 18
-
 
 class WsjtxDecodeError(Exception):
     """Base for all decode failures."""
@@ -344,7 +341,7 @@ def decode_packet(
         UnsupportedSchemaVersion: schema version not in the supported set.
         UnknownMessageType: packet type field is not recognised.
     """
-    r = QDataStreamReader(data, version=_QT_STREAM_VERSION)
+    r = QDataStreamReader(data)
     try:
         header = _decode_header(r)
         if header.schema not in _SUPPORTED_SCHEMAS:
