@@ -36,6 +36,25 @@ CLEAR_CASES = [
         "header": DUMMY_HEADER,
         "expected": ClearPacket(schema=2, type=3, id=""),
     },
+    # window=0 (clear Band Activity) — client → WSJT-X direction
+    {
+        "input": qt_string("WSJT-X") + b"\x00",
+        "header": DUMMY_HEADER,
+        "expected": ClearPacket(schema=2, type=3, id="WSJT-X", window=0),
+        "remaining": 0,
+    },
+    # window=1 (clear Rx Frequency)
+    {
+        "input": qt_string("WSJT-X") + b"\x01",
+        "header": DUMMY_HEADER,
+        "expected": ClearPacket(schema=2, type=3, id="WSJT-X", window=1),
+    },
+    # window=2 (clear Both windows)
+    {
+        "input": qt_string("WSJT-X") + b"\x02",
+        "header": DUMMY_HEADER,
+        "expected": ClearPacket(schema=2, type=3, id="WSJT-X", window=2),
+    },
 ]
 
 

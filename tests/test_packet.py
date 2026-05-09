@@ -117,6 +117,11 @@ PACKET_CASES = [
         "input": bytes.fromhex("adbccbda00000002000000030000000657534a542d58"),
         "expected": ClearPacket(schema=2, type=3, id="WSJT-X"),
     },
+    # Clear with window=2 (both windows) — client → WSJT-X direction
+    {
+        "input": bytes.fromhex("adbccbda00000002000000030000000657534a542d5802"),
+        "expected": ClearPacket(schema=2, type=3, id="WSJT-X", window=2),
+    },
     {
         "input": bytes.fromhex("adbccbda00000002000000060000000657534a542d58"),
         "expected": ClosePacket(schema=2, type=6, id="WSJT-X"),
