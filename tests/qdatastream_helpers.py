@@ -1,50 +1,63 @@
 """
-qdatastream_helpers.py - helper functions to mock input
+qdatastream_helpers.py - helper functions to build test input bytes
 """
 
-import struct
 from datetime import datetime
 
-from wsjtx_codec.qdatastream import QDataStreamReader
+from wsjtx_codec.qdatastream import QDataStreamReader, QDataStreamWriter
 
 
 def reader(data: bytes) -> QDataStreamReader:
     return QDataStreamReader(data, version=18)
 
 
+def _w() -> QDataStreamWriter:
+    return QDataStreamWriter()
+
+
 def u32(n: int) -> bytes:
-    return struct.pack(">I", n)
+    w = _w()
+    w.write_u32(n)
+    return w.getvalue()
 
 
 def i32(n: int) -> bytes:
-    return struct.pack(">i", n)
+    w = _w()
+    w.write_i32(n)
+    return w.getvalue()
 
 
 def i64(n: int) -> bytes:
-    return struct.pack(">q", n)
+    w = _w()
+    w.write_i64(n)
+    return w.getvalue()
 
 
 def u64(n: int) -> bytes:
-    return struct.pack(">Q", n)
+    w = _w()
+    w.write_u64(n)
+    return w.getvalue()
 
 
 def f64(n: float) -> bytes:
-    return struct.pack(">d", n)
+    w = _w()
+    w.write_f64(n)
+    return w.getvalue()
 
 
 def bool_byte(b: bool) -> bytes:
-    return b"\x01" if b else b"\x00"
+    w = _w()
+    w.write_bool(b)
+    return w.getvalue()
 
 
 def qdatetime_utc(dt: datetime) -> bytes:
-    _JDN_ORDINAL_OFFSET = 1721425
-    jdn = dt.toordinal() + _JDN_ORDINAL_OFFSET
-    ms = (dt.hour * 3600 + dt.minute * 60 + dt.second) * 1000 + (dt.microsecond // 1000)
-    return i64(jdn) + u32(ms) + b"\x01"
+    w = _w()
+    w.write_qdatetime(dt)
+    return w.getvalue()
 
 
 def qt_string(s: str | None) -> bytes:
-    if s is None:
-        return b"\xff\xff\xff\xff"
-    encoded = s.encode("utf-8")
-    return struct.pack(">I", len(encoded)) + encoded
+    w = _w()
+    w.write_utf8(s)
+    return w.getvalue()
