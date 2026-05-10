@@ -3,6 +3,7 @@ from wsjtx_codec.packet import (
     ClosePacket,
     DecodePacket,
     HeartbeatPacket,
+    LoggedAdifPacket,
     MalformedPacket,
     QsoLoggedPacket,
     StatusPacket,
@@ -26,4 +27,5 @@ __all__ = [
     "ClosePacket",
     "QsoLoggedPacket",
     "WsprPacket",
+    "LoggedAdifPacket",
 ]
