@@ -12,6 +12,7 @@ from wsjtx_codec.packet import (
     ClosePacket,
     DecodePacket,
     HeartbeatPacket,
+    LoggedAdifPacket,
     MalformedPacket,
     QsoLoggedPacket,
     StatusPacket,
@@ -167,6 +168,37 @@ PACKET_CASES = [
             exchange_sent="",
             exchange_rcvd="",
             adif_prop_mode=None,
+        ),
+    },
+    {
+        "input": bytes.fromhex(
+            "adbccbda000000020000000c0000000657534a542d58"
+            "000001310a3c616469665f7665723a353e332e312e300a"
+            "3c70726f6772616d69643a363e57534a542d580a3c454f483e0a"
+            "3c63616c6c3a353e4b4e345142203c677269647371756172653a343e454d3736"
+            "203c6d6f64653a333e465438203c7273745f73656e743a333e2d3134"
+            "203c7273745f726376643a333e2d3034203c71736f5f646174653a383e3230323630353130"
+            "203c74696d655f6f6e3a363e313431373030203c71736f5f646174655f6f66663a383e3230323630353130"
+            "203c74696d655f6f66663a363e313431383030203c62616e643a333e32306d"
+            "203c667265713a393e31342e303736303435"
+            "203c73746174696f6e5f63616c6c7369676e3a363e4b4630554e4b"
+            "203c6d795f677269647371756172653a363e454e33344a57"
+            "203c74785f7077723a333e323057203c454f523e"
+        ),
+        "expected": LoggedAdifPacket(
+            schema=2,
+            type=12,
+            id="WSJT-X",
+            adif_text=(
+                "\n<adif_ver:5>3.1.0\n<programid:6>WSJT-X\n<EOH>\n"
+                "<call:5>KN4QB <gridsquare:4>EM76 <mode:3>FT8"
+                " <rst_sent:3>-14 <rst_rcvd:3>-04"
+                " <qso_date:8>20260510 <time_on:6>141700"
+                " <qso_date_off:8>20260510 <time_off:6>141800"
+                " <band:3>20m <freq:9>14.076045"
+                " <station_callsign:6>KF0UNK <my_gridsquare:6>EN34JW"
+                " <tx_pwr:3>20W <EOR>"
+            ),
         ),
     },
     {
